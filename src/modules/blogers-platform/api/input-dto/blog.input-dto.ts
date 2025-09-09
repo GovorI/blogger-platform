@@ -1,17 +1,27 @@
 import { CreateBlogDto } from '../../dto/create-blog.dto';
 import { UpdateBlogDto } from '../../dto/update-blog.dto';
+import { IsNotEmpty, IsString, IsUrl, MaxLength } from 'class-validator';
 
 /**
  * Data transfer object for creating a new blog
  */
 export class CreateBlogInputDto implements CreateBlogDto {
   /** Blog name (max 15 characters) */
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(15)
   name: string;
 
   /** Blog description (max 500 characters) */
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(500)
   description: string;
 
   /** Blog website URL (max 100 characters) */
+  @IsNotEmpty()
+  @IsUrl()
+  @MaxLength(100)
   websiteUrl: string;
 }
 
@@ -20,11 +30,20 @@ export class CreateBlogInputDto implements CreateBlogDto {
  */
 export class UpdateBlogInputDto implements UpdateBlogDto {
   /** Blog name (max 15 characters) */
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(15)
   name: string;
 
   /** Blog description (max 500 characters) */
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(500)
   description: string;
 
   /** Blog website URL (max 100 characters) */
+  @IsNotEmpty()
+  @IsUrl()
+  @MaxLength(100)
   websiteUrl: string;
 }

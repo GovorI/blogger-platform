@@ -6,10 +6,10 @@ import {
   Param,
   Delete,
   Query,
-  NotFoundException,
   Put,
   HttpCode,
 } from '@nestjs/common';
+import { BadRequestException } from '../../../../core/domain/domain.exception';
 import {
   ApiTags,
   ApiOperation,
@@ -39,7 +39,7 @@ export class BlogsController {
     private readonly blogsQueryRepo: BlogsQueryRepository,
     private readonly postsService: PostsService,
     private readonly postsQueryRepository: PostsQueryRepository,
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new blog' })
@@ -107,7 +107,7 @@ export class BlogsController {
     @Param('id') id: string,
     @Body() post: CreatePostInputDto,
   ) {
-    if (!id) throw new NotFoundException('not found id');
+    if (!id) throw new BadRequestException('Blog ID is required');
     post.blogId = id;
     const postId: string = await this.postsService.createPost(post);
     return await this.postsQueryRepository.getByIdOrNotFoundFail(postId);

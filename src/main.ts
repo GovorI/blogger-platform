@@ -1,10 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { appSetup } from './setup/app.setup';
+import { useContainer } from 'class-validator';
+import { CoreConfig } from './core/core.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const coreConfig = app.get<CoreConfig>(CoreConfig);
+  // Enable DI in class-validator so custom validators can inject services/models
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
   appSetup(app);
   // app.enableCors();
   // app.useGlobalPipes(
@@ -18,19 +22,19 @@ async function bootstrap() {
   // );
 
   // Swagger configuration
-  const config = new DocumentBuilder()
-    .setTitle('Blogger Platform API')
-    .setDescription('The Blogger Platform API description')
-    .setVersion('1.0')
-    .addTag('blogs')
-    .addTag('posts')
-    .addTag('users')
-    .build();
+  // const config = new DocumentBuilder()
+  //   .setTitle('Blogger Platform API')
+  //   .setDescription('The Blogger Platform API description')
+  //   .setVersion('1.0')
+  //   .addTag('blogs')
+  //   .addTag('posts')
+  //   .addTag('users')
+  //   .build();
+  //
+  // const document = SwaggerModule.createDocument(app, config);
+  // SwaggerModule.setup('api/docs', app, document);
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
-
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(coreConfig.port);
 }
 //...
 

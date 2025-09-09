@@ -1,6 +1,7 @@
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument, UserModelType } from '../domain/user.entity';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { UserNotFoundException } from '../../../core/domain/domain.exception';
 
 @Injectable()
 export class UsersRepository {
@@ -21,7 +22,7 @@ export class UsersRepository {
   async findOrNotFoundFail(id: string): Promise<UserDocument> {
     const user = await this.UserModel.findById(id);
     if (!user || user.deletedAt !== null) {
-      throw new NotFoundException('User not found');
+      throw new UserNotFoundException('User not found');
     }
 
     return user;
@@ -33,5 +34,25 @@ export class UsersRepository {
 
   async getUserByEmail(email: string): Promise<UserDocument | null> {
     return this.UserModel.findOne({ email });
+  }
+
+  async findByLoginOrEmail(loginOrEmail: string): Promise<UserDocument | null> {
+    return this.UserModel.findOne({
+      $or: [{ email: loginOrEmail }, { login: loginOrEmail }],
+      deletedAt: null,
+    });
+  }
+
+  async findUserByConfirmationCode(code: string): Promise<UserDocument | null> {
+    return this.UserModel.findOne({ confirmCode: code, deletedAt: null });
+  }
+
+  async findUserByPasswordRecoveryCode(
+    code: string,
+  ): Promise<UserDocument | null> {
+    return this.UserModel.findOne({
+      passwordRecoveryCode: code,
+      deletedAt: null,
+    });
   }
 }

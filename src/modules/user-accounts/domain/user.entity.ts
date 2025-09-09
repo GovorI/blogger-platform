@@ -22,6 +22,30 @@ export class User {
   @Prop({ type: Boolean, required: true, default: false })
   isEmailConfirmed: boolean;
 
+  @Prop({
+    type: String,
+    required: function (this: User) {
+      return !this.isEmailConfirmed;
+    },
+    default: null,
+  })
+  confirmCode: string | null;
+
+  @Prop({
+    type: Date,
+    required: function (this: User) {
+      return !this.isEmailConfirmed;
+    },
+    default: null,
+  })
+  expirationCode: Date | null;
+
+  @Prop({ type: String, required: false, default: null })
+  passwordRecoveryCode: string | null;
+
+  @Prop({ type: Date, required: false, default: null })
+  passwordRecoveryExpiration: Date | null;
+
   createdAt: Date;
   updatedAt: Date;
 
@@ -35,6 +59,7 @@ export class User {
   static createInstance(dto: CreateUserDto): UserDocument {
     const user = new this();
     user.email = dto.email;
+    // Password will be hashed by service
     user.passwordHash = dto.password;
     user.login = dto.login;
     user.isEmailConfirmed = false; // пользователь ВСЕГДА должен после регистрации подтверждить свой Email

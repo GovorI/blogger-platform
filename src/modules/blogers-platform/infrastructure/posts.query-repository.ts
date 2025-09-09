@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { PostNotFoundException } from '../../../core/domain/domain.exception';
 import { Post, PostDocument, PostModelType } from '../domain/post.entity';
 import {
   GetPostsQueryParams,
@@ -11,7 +12,7 @@ import { SortDirection } from '../../../core/dto/base.query-params.input-dto';
 
 @Injectable()
 export class PostsQueryRepository {
-  constructor(@InjectModel(Post.name) private PostModel: PostModelType) {}
+  constructor(@InjectModel(Post.name) private PostModel: PostModelType) { }
 
   async getPostsForBlog(
     blogId: string,
@@ -74,7 +75,7 @@ export class PostsQueryRepository {
       deletedAt: null,
     });
     if (!post) {
-      throw new NotFoundException('Post not found');
+      throw new PostNotFoundException('Post not found');
     }
     return PostViewDto.mapToView(post);
   }

@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { BadRequestException } from '../../../core/domain/domain.exception';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserModelType } from '../domain/user.entity';
 import { UsersRepository } from '../infrastructure/users.repository';
 import { CreateUserDto } from '../dto/create-user.dto';
-import { BcryptService } from './bcrypt.service';
+import { CryptoService } from './crypto-service';
 
 @Injectable()
 export class UsersService {
@@ -12,8 +13,8 @@ export class UsersService {
     @InjectModel(User.name)
     private UserModel: UserModelType,
     private usersRepository: UsersRepository,
-    private bcryptService: BcryptService,
-  ) {}
+    private bcryptService: CryptoService,
+  ) { }
 
   async createUser(dto: CreateUserDto): Promise<string> {
     const [existingUserByLogin, existingUserByEmail] = await Promise.all([
@@ -27,13 +28,20 @@ export class UsersService {
       throw new BadRequestException('Email already exists');
     }
 
-    const passwordHash: string = await this.bcryptService.getHash(dto.password);
+    const passwordHash: string = await this.bcryptService.createPassHash(
+      dto.password,
+    );
 
     const user = this.UserModel.createInstance({
       email: dto.email,
       login: dto.login,
       password: passwordHash,
     });
+
+    // Admin-created users don't require email confirmation
+    user.isEmailConfirmed = true;
+    user.confirmCode = null;
+    user.expirationCode = null;
 
     await this.usersRepository.save(user);
     return user._id.toString();

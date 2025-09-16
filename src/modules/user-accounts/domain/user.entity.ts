@@ -46,6 +46,9 @@ export class User {
   @Prop({ type: Date, required: false, default: null })
   passwordRecoveryExpiration: Date | null;
 
+  @Prop({ type: [String], required: false, default: [] })
+  validRefreshTokens: string[];
+
   createdAt: Date;
   updatedAt: Date;
 
@@ -92,6 +95,47 @@ export class User {
   //   }
   //   this.email = dto.email;
   // }
+
+  /**
+   * Adds a new refresh token to the valid tokens list
+   * @param {string} tokenId - The ID of the refresh token to add
+   */
+  addRefreshToken(tokenId: string) {
+    if (!this.validRefreshTokens) {
+      this.validRefreshTokens = [];
+    }
+    this.validRefreshTokens.push(tokenId);
+  }
+
+  /**
+   * Removes a refresh token from the valid tokens list
+   * @param {string} tokenId - The ID of the refresh token to remove
+   */
+  removeRefreshToken(tokenId: string) {
+    if (!this.validRefreshTokens) {
+      return;
+    }
+    this.validRefreshTokens = this.validRefreshTokens.filter(id => id !== tokenId);
+  }
+
+  /**
+   * Checks if a refresh token is valid
+   * @param {string} tokenId - The ID of the refresh token to check
+   * @returns {boolean} True if the token is valid
+   */
+  isRefreshTokenValid(tokenId: string): boolean {
+    if (!this.validRefreshTokens) {
+      return false;
+    }
+    return this.validRefreshTokens.includes(tokenId);
+  }
+
+  /**
+   * Invalidates all refresh tokens
+   */
+  invalidateAllRefreshTokens() {
+    this.validRefreshTokens = [];
+  }
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

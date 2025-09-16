@@ -14,11 +14,15 @@ import { LocalAuthGuard } from './guards/local/local-auth.guard';
 import { JwtAuthModule } from '../jwt/jwt.module';
 import { JwtStrategy } from './guards/bearer/jwt.strategy';
 import { JwtAuthGuard } from './guards/bearer/jwt-auth.guard';
+import { JwtOptionalGuard } from './guards/bearer/jwt-optional.guard';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { BasicAuthGuard } from './guards/basic/basic-auth.guard';
-import { RateLimiterService } from './application/rate-limiter.service';
+import { RateLimiterService } from '../../core/services/rate-limiter.service';
 import { ConfirmationCodeConstraint } from './validators/confirmation-code.validator';
 import { EmailValidator } from './validators/email.validator';
+import { UsersConfig } from './config/users.config';
+import { RateLimiterConfig } from './config/rate-limiter.config';
+import { RateLimitGuard } from 'src/core/guards/rate-limit.guard';
 
 @Module({
   imports: [
@@ -38,11 +42,15 @@ import { EmailValidator } from './validators/email.validator';
     LocalAuthGuard,
     JwtStrategy,
     JwtAuthGuard,
+    JwtOptionalGuard,
+    RateLimitGuard,
     BasicAuthGuard,
     RateLimiterService,
     ConfirmationCodeConstraint,
     EmailValidator,
+    UsersConfig,
+    RateLimiterConfig,
   ],
-  exports: [AuthService],
+  exports: [AuthService, UsersService],
 })
-export class UserAccountsModule {}
+export class UserAccountsModule { }

@@ -1,33 +1,74 @@
-/**
- * Data transfer object for creating a new post
- */
+import { IsNotEmpty, IsString, Length } from "class-validator";
+import { Transform } from "class-transformer";
+
 export class CreatePostInputDto {
-  /** Post title (max 30 characters) */
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsNotEmpty()
+  @IsString()
+  @Length(1, 30)
   title: string;
 
-  /** Short description of the post (max 100 characters) */
+  @IsNotEmpty()
+  @IsString()
+  @Length(1, 100)
   shortDescription: string;
 
-  /** Post content (max 1000 characters) */
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsNotEmpty()
+  @IsString()
+  @Length(1, 1000)
   content: string;
 
-  /** Blog ID that will contain this post */
+  @IsNotEmpty()
+  @IsString()
   blogId: string;
+}
+
+/**
+ * Data transfer object for creating a post within a specific blog
+ * The blogId is provided via URL parameter, not request body
+ */
+export class CreatePostForBlogInputDto {
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsNotEmpty()
+  @IsString()
+  @Length(1, 30)
+  title: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @Length(1, 100)
+  shortDescription: string;
+
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsNotEmpty()
+  @IsString()
+  @Length(1, 1000)
+  content: string;
 }
 
 /**
  * Data transfer object for updating an existing post
  */
 export class UpdatePostInputDto {
-  /** Post title (max 30 characters) */
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsNotEmpty()
+  @IsString()
+  @Length(1, 30)
   title?: string;
 
-  /** Short description of the post (max 100 characters) */
+  @IsNotEmpty()
+  @IsString()
+  @Length(1, 100)
   shortDescription?: string;
 
-  /** Post content (max 1000 characters) */
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsNotEmpty()
+  @IsString()
+  @Length(1, 1000)
   content?: string;
 
-  /** Blog ID that will contain this post */
+  @IsNotEmpty()
+  @IsString()
   blogId?: string;
 }

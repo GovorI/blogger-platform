@@ -71,6 +71,15 @@ export class UnauthorizedException extends DomainException {
   }
 }
 
+export class TooManyRequestsException extends DomainException {
+  constructor(message: string = 'Too many requests') {
+    super({
+      code: DomainExceptionCode.TooMenyRequeses,
+      message,
+    });
+  }
+}
+
 export class ForbiddenException extends DomainException {
   constructor(message: string = 'Access forbidden') {
     super({

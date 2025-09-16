@@ -1,26 +1,33 @@
 import { Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { EmailService } from './email.service';
+import { NotificationsConfig } from './notifications.config';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    MailerModule.forRoot({
-      transport: {
-        host: process.env.MAIL_HOST || 'smtp.mail.ru',
-        port: process.env.MAIL_PORT ? parseInt(process.env.MAIL_PORT, 10) : 465,
-        secure: (process.env.MAIL_SECURE ?? 'true') === 'true',
-        auth: {
-          user: process.env.MAIL_USER || '',
-          pass: process.env.MAIL_PASS || '',
-        },
-        tls: {
-          rejectUnauthorized:
-            (process.env.MAIL_TLS_REJECT_UNAUTHORIZED ?? 'false') === 'true',
-        },
+    MailerModule.forRootAsync({
+      useFactory: (configService: ConfigService<any, true>) => {
+        const notificationsConfig = new NotificationsConfig(configService);
+        return {
+          transport: {
+            host: notificationsConfig.mailHost,
+            port: notificationsConfig.mailPort,
+            secure: notificationsConfig.mailSecure,
+            auth: {
+              user: notificationsConfig.mailUser,
+              pass: notificationsConfig.mailPass,
+            },
+            tls: {
+              rejectUnauthorized: notificationsConfig.mailTlsRejectUnauthorized,
+            },
+          },
+        };
       },
+      inject: [ConfigService],
     }),
   ],
-  providers: [EmailService],
-  exports: [EmailService],
+  providers: [NotificationsConfig, EmailService],
+  exports: [NotificationsConfig, EmailService],
 })
-export class NotificationsModule {}
+export class NotificationsModule { }

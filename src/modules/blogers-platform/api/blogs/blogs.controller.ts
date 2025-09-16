@@ -8,6 +8,8 @@ import {
   Query,
   Put,
   HttpCode,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { BadRequestException } from '../../../../core/domain/domain.exception';
 import {
@@ -27,9 +29,11 @@ import { GetBlogsQueryParams } from './get-blogs-query-params.input-dto';
 import { PaginatedViewDto } from '../../../../core/dto/base.paginated.view-dto';
 import { BlogViewDto } from '../view-dto/blog.view-dto';
 import { PostsService } from '../../application/posts-service';
-import { CreatePostInputDto } from '../input-dto/post.input.dto';
+import { CreatePostInputDto, CreatePostForBlogInputDto } from '../input-dto/post.input.dto';
 import { PostsQueryRepository } from '../../infrastructure/posts.query-repository';
 import { GetPostsQueryParams } from '../posts/get-posts-query-params.input-dto';
+import { BasicAuthGuard } from '../../../user-accounts/guards/basic/basic-auth.guard';
+import { JwtOptionalGuard } from '../../../user-accounts/guards/bearer/jwt-optional.guard';
 
 @ApiTags('blogs')
 @Controller('blogs')
@@ -42,6 +46,7 @@ export class BlogsController {
   ) { }
 
   @Post()
+  @UseGuards(BasicAuthGuard)
   @ApiOperation({ summary: 'Create a new blog' })
   @ApiBody({ type: CreateBlogInputDto })
   @ApiResponse({
@@ -69,6 +74,7 @@ export class BlogsController {
   }
 
   @Put(':id')
+  @UseGuards(BasicAuthGuard)
   @HttpCode(204)
   @ApiOperation({ summary: 'Update blog by ID' })
   @ApiParam({ name: 'id', description: 'Blog ID' })
@@ -93,6 +99,7 @@ export class BlogsController {
   }
 
   @Delete(':id')
+  @UseGuards(BasicAuthGuard)
   @HttpCode(204)
   @ApiOperation({ summary: 'Delete blog by ID' })
   @ApiParam({ name: 'id', description: 'Blog ID' })
@@ -103,22 +110,31 @@ export class BlogsController {
   }
 
   @Post(':id/posts')
+  @UseGuards(BasicAuthGuard)
   async createPostForBlog(
     @Param('id') id: string,
-    @Body() post: CreatePostInputDto,
+    @Body() postData: CreatePostForBlogInputDto,
   ) {
     if (!id) throw new BadRequestException('Blog ID is required');
-    post.blogId = id;
-    const postId: string = await this.postsService.createPost(post);
+
+    const createPostDto: CreatePostInputDto = {
+      ...postData,
+      blogId: id
+    };
+
+    const postId: string = await this.postsService.createPost(createPostDto);
     return await this.postsQueryRepository.getByIdOrNotFoundFail(postId);
   }
 
   @Get(':id/posts')
+  @UseGuards(JwtOptionalGuard)
   async getPostsForBlog(
     @Param('id') id: string,
     @Query() query: GetPostsQueryParams,
+    @Req() req: any,
   ) {
     await this.blogsQueryRepo.getByIdOrNotFoundFail(id);
-    return this.postsQueryRepository.getPostsForBlog(id, query);
+    const currentUserId = req.user?.id;
+    return this.postsQueryRepository.getPostsForBlog(id, query, currentUserId);
   }
 }

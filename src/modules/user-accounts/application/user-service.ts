@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { BadRequestException } from '../../../core/domain/domain.exception';
+import { BadRequestException, UserNotFoundException } from '../../../core/domain/domain.exception';
 import { InjectModel } from '@nestjs/mongoose';
-import { User, UserModelType } from '../domain/user.entity';
+import { User, UserDocument, UserModelType } from '../domain/user.entity';
 import { UsersRepository } from '../infrastructure/users.repository';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { CryptoService } from './crypto-service';
@@ -63,5 +63,13 @@ export class UsersService {
     user.makeDeleted();
 
     await this.usersRepository.save(user);
+  }
+
+  async getUserByIdOrNotFound(id: string): Promise<UserDocument> {
+    const user = await this.usersRepository.findById(id)
+    if (!user) {
+      throw new UserNotFoundException
+    }
+    return user
   }
 }

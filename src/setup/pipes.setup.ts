@@ -14,6 +14,7 @@ export const errorFormatter = (
   errorMessage?: any,
 ): Extension[] => {
   const errorsForResponse = errorMessage || [];
+  const fieldErrorMap = new Map<string, string>();
 
   for (const error of errors) {
     if (!error.constraints && error.children?.length) {
@@ -21,11 +22,14 @@ export const errorFormatter = (
     } else if (error.constraints) {
       const constrainKeys = Object.keys(error.constraints);
 
-      for (const key of constrainKeys) {
+      // Take only the first error message for each field to avoid duplicates
+      if (!fieldErrorMap.has(error.property) && constrainKeys.length > 0) {
+        const firstConstraintKey = constrainKeys[0];
+        const message = error.constraints[firstConstraintKey];
+        fieldErrorMap.set(error.property, message);
+
         const errorMsg = new Extension(
-          error.constraints[key]
-            ? `${error.constraints[key]}; Received value: ${error?.value}`
-            : '',
+          message,
           error.property,
         );
         errorsForResponse.push(errorMsg);
@@ -45,7 +49,12 @@ export function pipesSetup(app: INestApplication) {
       //соответственно применятся значения по-умолчанию
       //и методы классов dto
       transform: true,
-      stopAtFirstError: false,
+      stopAtFirstError: false, // Allow all validation errors to be collected
+      whitelist: false, // Don't strip properties to allow default values
+      forbidNonWhitelisted: false, // Don't throw error for unknown properties
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
       exceptionFactory: (errors) => {
         const formattedErrors = errorFormatter(errors);
         throw new ValidationException('Validation failed', formattedErrors);

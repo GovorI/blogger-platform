@@ -1,8 +1,8 @@
 import { INestApplication } from '@nestjs/common';
-
-export const GLOBAL_PREFIX = process.env.GLOBAL_PREFIX || 'api';
+import { CoreConfig } from '../core/core.config';
 
 export function globalPrefixSetup(app: INestApplication) {
+  const coreConfig = app.get<CoreConfig>(CoreConfig);
   //специальный метод, который добавляет ко всем маршрутам /GLOBAL_PREFIX
-  app.setGlobalPrefix(GLOBAL_PREFIX);
+  app.setGlobalPrefix(coreConfig.globalPrefix);
 }

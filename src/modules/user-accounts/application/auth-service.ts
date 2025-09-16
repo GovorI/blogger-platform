@@ -6,17 +6,20 @@ import { JwtService } from './jwt-service';
 import { UserContextDto } from '../guards/dto/user-context.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserModelType } from '../domain/user.entity';
-import { EmailService } from 'src/modules/notifications/email.service';
-import { ValidationException } from 'src/core/domain/domain.exception';
-import { Extension } from 'src/core/exceptions/domain-exceptions';
+import { EmailService } from '../../notifications/email.service';
+import { TooManyRequestsException, ValidationException } from '../../../core/domain/domain.exception';
+import { Extension } from '../../../core/exceptions/domain-exceptions';
 import { randomUUID } from 'crypto';
-import { RateLimiterService } from './rate-limiter.service';
+import { RateLimiterService } from '../../../core/services/rate-limiter.service';
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { UnauthorizedException as DomainUnauthorizedException } from 'src/core/domain/domain.exception';
+import { UnauthorizedException as DomainUnauthorizedException } from '../../../core/domain/domain.exception';
 import { PasswordRecoveryInputDto } from '../api/input-dto/password-recovery.input-dto';
 import { NewPasswordInputDto } from '../api/input-dto/new-password.input-dto';
 import { EmailResendingInputDto } from '../api/input-dto/email-resending.input-dto';
 import { UsersQueryRepository } from '../infrastructure/users.query-repository';
+import { UsersConfig } from '../config/users.config';
+import { RateLimiterConfig } from '../config/rate-limiter.config';
+import { JwtConfig } from '../../jwt/jwt.config';
 
 @Injectable()
 export class AuthService {
@@ -29,7 +32,10 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
     private readonly rateLimiter: RateLimiterService,
-  ) {}
+    private readonly usersConfig: UsersConfig,
+    private readonly rateLimiterConfig: RateLimiterConfig,
+    private readonly jwtConfig: JwtConfig,
+  ) { }
 
   async validateUser(
     loginOrEmail: string,
@@ -37,6 +43,11 @@ export class AuthService {
   ): Promise<UserContextDto | null> {
     const user = await this.usersRepository.findByLoginOrEmail(loginOrEmail);
     if (!user) {
+      return null;
+    }
+
+    // Check if email is confirmed (unless auto-confirmation is enabled)
+    if (!this.usersConfig.isAuthomaticallyConfirmed && !user.isEmailConfirmed) {
       return null;
     }
 
@@ -52,54 +63,125 @@ export class AuthService {
     return { id: user.id.toString() };
   }
 
-  async login(userId: string) {
+  async login(userId: string,) {
     const accessToken = this.jwtService.createJwtToken(
       userId,
       'deviceId',
-      '1h',
+      this.jwtConfig.accessTokenExpiresIn,
+      false
     );
+
+    const refreshToken = this.jwtService.createJwtToken(
+      userId,
+      'deviceId',
+      this.jwtConfig.refreshTokenExpiresIn,
+      true
+    );
+
+    // Extract refresh token ID and add to user's valid tokens
+    const refreshPayload = await this.jwtService.decodeToken(refreshToken);
+    const refreshTokenId = refreshPayload?.jti;
+
+    if (refreshTokenId) {
+      const user = await this.usersRepository.findById(userId);
+      if (user) {
+        user.addRefreshToken(refreshTokenId);
+        await this.usersRepository.save(user);
+      }
+    }
 
     return {
       accessToken,
+      refreshToken,
     };
   }
 
-  // async login(dto: LoginInputDto) {
-  //     const user = await this.usersRepository.findByLoginOrEmail(dto.loginOrEmail);
-  //     if (!user) {
-  //         // throw new Error('Invalid credentials');
-  //         throw new UserNotFoundException()
-  //     }
+  async refreshToken(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyToken(refreshToken);
+      const userId = payload?.sub;
+      const tokenId = payload?.jti;
 
-  //     const passwordMatch = await this.cryptoService.comparePasswords(
-  //         dto.password,
-  //         user.passwordHash
-  //     );
-  //     if (!passwordMatch) {
-  //         // throw new Error('Invalid credentials');
-  //         throw new UnauthorizedException()
-  //     }
-  //     const accessToken = this.jwtService.createJwtToken(user.id, 'deviceId', '5m')
-  //     return {
-  //         accessToken
-  //     };
-  // }
+      if (!userId || !tokenId) {
+        throw new DomainUnauthorizedException();
+      }
+
+      const user = await this.usersRepository.findById(userId);
+      if (!user || user.deletedAt) {
+        throw new DomainUnauthorizedException();
+      }
+
+      if (!user.isRefreshTokenValid(tokenId)) {
+        throw new DomainUnauthorizedException();
+      }
+
+      user.removeRefreshToken(tokenId);
+
+      const newAccessToken = this.jwtService.createJwtToken(
+        userId,
+        'deviceId',
+        this.jwtConfig.accessTokenExpiresIn,
+        false
+      );
+
+      const newRefreshToken = this.jwtService.createJwtToken(
+        userId,
+        'deviceId',
+        this.jwtConfig.refreshTokenExpiresIn,
+        true
+      );
+
+      const newRefreshPayload = await this.jwtService.decodeToken(newRefreshToken);
+      const newRefreshTokenId = newRefreshPayload?.jti;
+
+      if (newRefreshTokenId) {
+        user.addRefreshToken(newRefreshTokenId);
+      }
+
+      await this.usersRepository.save(user);
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
+    } catch (error) {
+      throw new DomainUnauthorizedException();
+    }
+  }
+
+  async logout(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyToken(refreshToken);
+      const userId = payload?.sub;
+      const tokenId = payload?.jti;
+
+      if (!userId || !tokenId) {
+        throw new DomainUnauthorizedException();
+      }
+
+      const user = await this.usersRepository.findById(userId);
+      if (!user || user.deletedAt) {
+        throw new DomainUnauthorizedException();
+      }
+
+      if (!user.isRefreshTokenValid(tokenId)) {
+        throw new DomainUnauthorizedException();
+      }
+
+      user.removeRefreshToken(tokenId);
+      await this.usersRepository.save(user);
+    } catch (error) {
+      // Re-throw unauthorized exceptions, wrap other errors
+      if (error instanceof DomainUnauthorizedException) {
+        throw error;
+      }
+      throw new DomainUnauthorizedException();
+    }
+  }
 
   async passwordRecovery(
     dto: PasswordRecoveryInputDto,
-    ip: string | undefined,
   ) {
-    const key = `password-recovery:${ip ?? 'unknown'}`;
-    const max = Number.isFinite(parseInt(process.env.RATE_LIMIT_MAX ?? '', 10)) ? parseInt(process.env.RATE_LIMIT_MAX as string, 10) : 5;
-    const windowMs = Number.isFinite(parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '', 10)) ? parseInt(process.env.RATE_LIMIT_WINDOW_MS as string, 10) : 10_000;
-    const limited = this.rateLimiter.isLimited(key, max, windowMs);
-    if (limited) {
-      throw new HttpException(
-        'Too Many Requests',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
     const user = await this.usersRepository.getUserByEmail(dto.email);
     if (!user) {
       // Return silently to prevent email enumeration
@@ -153,7 +235,16 @@ export class AuthService {
     await this.usersRepository.save(user);
   }
 
-  async registration(dto: RegistrationInputDto) {
+  async registration(dto: RegistrationInputDto, ip: string | undefined) {
+    const key = `registration:${ip ?? 'unknown'}`;
+    const limited = this.rateLimiter.isLimited(
+      key,
+      this.rateLimiterConfig.max,
+      this.rateLimiterConfig.windowMs
+    );
+    if (limited) {
+      throw new TooManyRequestsException()
+    }
     const [existingUserByLogin, existingUserByEmail] = await Promise.all([
       this.usersRepository.getUserByLogin(dto.login),
       this.usersRepository.getUserByEmail(dto.email),
@@ -180,14 +271,18 @@ export class AuthService {
       email: dto.email,
       passwordHash,
       createdAt: new Date(),
-      isEmailConfirmed: false,
+      isEmailConfirmed: this.usersConfig.isAuthomaticallyConfirmed,
       deletedAt: null,
       confirmCode,
       expirationCode,
     });
 
     await this.usersRepository.save(newUser);
-    this.emailService.sendConfirmationEmail(dto.email, confirmCode);
+
+    // Only send confirmation email if manual confirmation is required
+    if (!this.usersConfig.isAuthomaticallyConfirmed) {
+      this.emailService.sendConfirmationEmail(dto.email, confirmCode);
+    }
   }
 
   async registrationEmailResending(dto: EmailResendingInputDto) {
@@ -220,7 +315,7 @@ export class AuthService {
       throw new DomainUnauthorizedException();
     }
 
-    const userId: string | undefined = payload?.userId ?? payload?.sub;
+    const userId: string | undefined = payload?.sub;
     if (!userId) {
       throw new DomainUnauthorizedException();
     }

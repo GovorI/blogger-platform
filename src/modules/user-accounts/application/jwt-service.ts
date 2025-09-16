@@ -1,13 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService as NestJwtService } from '@nestjs/jwt';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class JwtService {
-  constructor(private readonly jwtService: NestJwtService) {}
+  constructor(private readonly jwtService: NestJwtService) { }
 
-  createJwtToken(userId: string, deviceId: string, lifeTime: string) {
+  createJwtToken(userId: string, deviceId: string, lifeTime: string, isRefreshToken: boolean = false) {
+    const payload: any = { sub: userId, deviceId };
+
+    if (isRefreshToken) {
+      payload.jti = randomUUID(); // JWT ID claim
+    }
+
     return this.jwtService.sign(
-      { userId, deviceId },
+      payload,
       {
         expiresIn: lifeTime,
       },

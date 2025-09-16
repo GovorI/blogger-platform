@@ -4,16 +4,20 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Injectable,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ErrorResponseBody } from './error-response-body.type';
 import { DomainExceptionCode } from '../domain-exception-codes';
+import { CoreConfig } from '../../core.config';
 
 
 //https://docs.nestjs.com/exception-filters#exception-filters-1
 //Все ошибки
+@Injectable()
 @Catch()
 export class AllHttpExceptionsFilter implements ExceptionFilter {
+  constructor(private readonly coreConfig: CoreConfig) { }
   catch(exception: any, host: ArgumentsHost): void {
     //ctx нужен, чтобы получить request и response (express). Это из документации, делаем по аналогии
     const ctx = host.switchToHttp();
@@ -68,13 +72,13 @@ export class AllHttpExceptionsFilter implements ExceptionFilter {
     message: string,
     code: number
   ): ErrorResponseBody {
-    //TODO: Replace with getter from configService. will be in the following lessons
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = this.coreConfig.env === 'production';
+    const showDetails = this.coreConfig.sendInternalServerErrorDetails;
 
     return {
       timestamp: new Date().toISOString(),
       path: isProduction ? null : requestUrl,
-      message: isProduction ? 'Internal server error' : message,
+      message: isProduction ? 'Internal server error' : (showDetails ? message : 'Internal server error'),
       extensions: [],
       code: code,
     };

@@ -1,8 +1,9 @@
 import { INestApplication } from '@nestjs/common';
-import { GLOBAL_PREFIX } from './global-prefix.setup';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { CoreConfig } from '../core/core.config';
 
 export function swaggerSetup(app: INestApplication) {
+  const coreConfig = app.get<CoreConfig>(CoreConfig);
   const config = new DocumentBuilder()
     .setTitle('BLOGGER API')
     .addBearerAuth()
@@ -10,7 +11,7 @@ export function swaggerSetup(app: INestApplication) {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(GLOBAL_PREFIX, app, document, {
+  SwaggerModule.setup(coreConfig.globalPrefix, app, document, {
     customSiteTitle: 'Blogger Swagger',
   });
 }

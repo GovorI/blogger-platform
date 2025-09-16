@@ -3,13 +3,14 @@ import { UserContextDto } from '../dto/user-context.dto';
 
 
 export const ExtractUserFromRequest = createParamDecorator(
-    (data: unknown, context: ExecutionContext): UserContextDto => {
+    (data: unknown, context: ExecutionContext): UserContextDto | null => {
         const request = context.switchToHttp().getRequest();
 
         const user = request.user;
 
         if (!user) {
-            throw new Error('there is no user in the request object!');
+            // For optional authentication, return null instead of throwing
+            return null;
         }
 
         return user;

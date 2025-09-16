@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IsBoolean, IsEnum, IsNotEmpty, IsNumber } from 'class-validator';
-import { configValidationUtility } from '../setup/config-validation.utility';
+import { configValidationUtility } from './utils/config-validation.utility';
 
 export enum Environments {
   DEVELOPMENT = 'development',
@@ -14,9 +14,10 @@ export enum Environments {
 @Injectable()
 export class CoreConfig {
   constructor(private configService: ConfigService<any, true>) {
-    this.port = Number(this.configService.get<string>('PORT'));
+    this.port = Number(this.configService.get<string>('PORT')) || 3000;
     this.mongoURI = this.configService.get<string>('MONGODB_URI');
     this.env = this.configService.get<string>('NODE_ENV');
+    this.globalPrefix = this.configService.get<string>('GLOBAL_PREFIX') || 'api';
 
     this.isSwaggerEnabled = configValidationUtility.convertToBoolean(
       this.configService.get<string>('IS_SWAGGER_ENABLED'),
@@ -44,7 +45,7 @@ export class CoreConfig {
 
   @IsNotEmpty({
     message:
-      'Set Env variable MONGO_URI, example: mongodb://localhost:27017/my-app-local-db',
+      'Set Env variable MONGODB_URI, example: mongodb://localhost:27017/my-app-local-db',
   })
   mongoURI: string;
 
@@ -72,4 +73,9 @@ export class CoreConfig {
       'Set Env variable SEND_INTERNAL_SERVER_ERROR_DETAILS to enable/disable Dangerous for production internal server error details (message, etc), example: true, available values: true, false, 0, 1',
   })
   sendInternalServerErrorDetails: boolean;
+
+  @IsNotEmpty({
+    message: 'Set Env variable GLOBAL_PREFIX for API global prefix, example: api',
+  })
+  globalPrefix: string;
 }

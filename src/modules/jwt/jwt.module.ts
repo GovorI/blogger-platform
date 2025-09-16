@@ -2,15 +2,23 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtService } from '../user-accounts/application/jwt-service';
 import { JwtStrategy } from '../user-accounts/guards/bearer/jwt.strategy';
+import { JwtConfig } from './jwt.config';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
     imports: [
-        JwtModule.register({
-            secret: process.env.JWT_SECRET || 'default_secret_key',
-            signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '1h' },
+        JwtModule.registerAsync({
+            useFactory: (configService: ConfigService<any, true>) => {
+                const jwtConfig = new JwtConfig(configService);
+                return {
+                    secret: jwtConfig.secret,
+                    signOptions: { expiresIn: jwtConfig.accessTokenExpiresIn },
+                };
+            },
+            inject: [ConfigService],
         }),
     ],
-    providers: [JwtService, JwtStrategy],
-    exports: [JwtService, JwtModule],
+    providers: [JwtConfig, JwtService, JwtStrategy],
+    exports: [JwtConfig, JwtService, JwtModule],
 })
 export class JwtAuthModule { }

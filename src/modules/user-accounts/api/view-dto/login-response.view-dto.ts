@@ -6,9 +6,9 @@ import { ApiProperty } from '@nestjs/swagger';
  * Refresh token is set as httpOnly cookie
  */
 export class LoginResponseViewDto {
-    @ApiProperty({
-        description: 'JWT access token for API authentication',
-        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-    })
-    accessToken: string;
+  @ApiProperty({
+    description: 'JWT access token for API authentication',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  accessToken: string;
 }

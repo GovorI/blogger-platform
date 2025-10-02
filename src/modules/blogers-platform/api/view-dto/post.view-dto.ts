@@ -1,4 +1,4 @@
-import { PostDocument } from '../../domain/post.entity';
+import { NewestLikeInfo, PostDocument } from '../../domain/post.entity';
 
 /**
  * Extended likes information for posts
@@ -14,7 +14,7 @@ class ExtendedLikesInfo {
   myStatus: 'Like' | 'Dislike' | 'None';
 
   /** Three newest likes */
-  newestLikes: any[];
+  newestLikes: NewestLikeInfo[];
 }
 
 /**
@@ -58,7 +58,10 @@ export class PostViewDto {
     dto.extendedLikesInfo = {
       dislikesCount: post.extendedLikesInfo.dislikesCount,
       likesCount: post.extendedLikesInfo.likesCount,
-      myStatus: (currentUserId ? post.extendedLikesInfo.myStatus : 'None') as 'Like' | 'Dislike' | 'None',
+      myStatus: (currentUserId ? post.extendedLikesInfo.myStatus : 'None') as
+        | 'Like'
+        | 'Dislike'
+        | 'None',
       newestLikes: post.extendedLikesInfo.newestLikes,
     };
     return dto;

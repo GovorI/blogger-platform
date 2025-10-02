@@ -4,6 +4,8 @@ import { IsConfirmationCodeValid } from '../../validators/confirmation-code.vali
 export class ConfirmationEmailInputDto {
   @IsNotEmpty()
   @IsString()
-  @IsConfirmationCodeValid({ message: 'The confirmation code is incorrect, expired or already applied' })
+  @IsConfirmationCodeValid({
+    message: 'The confirmation code is incorrect, expired or already applied',
+  })
   code: string;
 }

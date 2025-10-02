@@ -7,7 +7,10 @@ export class CryptoService {
     return await bcrypt.hash(pass, 10);
   }
 
-  async comparePasswords(plainTextPassword: string, hashedPassword: string): Promise<boolean> {
+  async comparePasswords(
+    plainTextPassword: string,
+    hashedPassword: string,
+  ): Promise<boolean> {
     return await bcrypt.compare(plainTextPassword, hashedPassword);
   }
 }

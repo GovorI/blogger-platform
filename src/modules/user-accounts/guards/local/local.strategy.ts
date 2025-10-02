@@ -6,15 +6,16 @@ import { UserContextDto } from '../dto/user-context.dto';
 import { UnauthorizedException } from '../../../../core/domain/domain.exception';
 import { ValidationException } from '../../../../core/domain/domain.exception';
 import { Extension } from '../../../../core/exceptions/domain-exceptions';
+import { Request } from 'express';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
   constructor(private authService: AuthService) {
-    super({ usernameField: 'loginOrEmail' });
+    super({ usernameField: 'loginOrEmail', passReqToCallback: true });
   }
 
   //validate возвращает то, что впоследствии будет записано в req.user
-  async validate(username: string, password: string): Promise<UserContextDto> {
+  async validate(req: Request, username: string, password: string): Promise<UserContextDto> {
     // Trim whitespace and validate inputs
     const trimmedUsername = username?.trim() || '';
     const trimmedPassword = password?.trim() || '';
@@ -37,7 +38,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
       throw new ValidationException('Validation failed', errors);
     }
 
-    const user = await this.authService.validateUser(trimmedUsername, trimmedPassword);
+    const user = await this.authService.validateUser(trimmedUsername, trimmedPassword, req.ip);
     if (!user) {
       // throw new UnauthorizedException('Invalid credentials');
       throw new UnauthorizedException();

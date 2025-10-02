@@ -1,11 +1,9 @@
 import { Module } from '@nestjs/common';
-import { BlogsService } from './application/blogs-service';
 import { BlogsController } from './api/blogs/blogs.controller';
 import { BlogsQueryRepository } from './infrastructure/blogs.query-repository';
 import { BlogsRepository } from './infrastructure/blogs.repository';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Blog, BlogSchema } from './domain/blog.entity';
-import { PostsService } from './application/posts-service';
 import { PostsRepository } from './infrastructure/posts.repository';
 import { Post, PostSchema } from './domain/post.entity';
 import { PostsQueryRepository } from './infrastructure/posts.query-repository';
@@ -15,11 +13,38 @@ import { UserAccountsModule } from '../user-accounts/user-accounts.module';
 import { Comment, CommentSchema } from './domain/comment.entity';
 import { CommentRepository } from './infrastructure/comment.repository';
 import { CommentsQueryRepository } from './infrastructure/comment.query-repository';
-import { CommentsService } from './application/comment-service';
-import { LikesService } from './application/like-service';
 import { LikesRepository } from './infrastructure/likesRepository';
 import { LikeStatusPost, LikeStatusPostSchema } from './domain/likeStatusPost';
-import { LikeStatusComment, LikeStatusCommentSchema } from './domain/likeStatusComment';
+import {
+  LikeStatusComment,
+  LikeStatusCommentSchema,
+} from './domain/likeStatusComment';
+import { CreateBlogUseCase } from './application/use-cases/blogs/create-blog.use-case';
+import { UpdateBlogUseCase } from './application/use-cases/blogs/update-blog.use-case';
+import { CqrsModule } from '@nestjs/cqrs';
+import { DeleteBlogUseCase } from './application/use-cases/blogs/delete-blog.use-case';
+import { CreatePostForBlogUseCase } from './application/use-cases/posts/create-post-for-blog.use-case';
+import { UpdatePostUseCase } from './application/use-cases/posts/update-post.use-case';
+import { DeletePostUseCase } from './application/use-cases/posts/delete-post.use-case';
+import { CreateCommentForPostUseCase } from './application/use-cases/comments/create-comment-for-post.use-case';
+import { SetLikeStatusForPostUseCase } from './application/use-cases/likes/set-like-status-for-post.use-case';
+import { SetLikeStatusForCommentUseCase } from './application/use-cases/likes/set-like-status-for-comment.use-case';
+import { UpdateCommentUseCase } from './application/use-cases/comments/update-comment.use-case';
+import { DeleteCommentUseCase } from './application/use-cases/comments/delete-comment.use-case';
+
+const useCases = [
+  CreateBlogUseCase,
+  UpdateBlogUseCase,
+  DeleteBlogUseCase,
+  CreatePostForBlogUseCase,
+  UpdatePostUseCase,
+  DeletePostUseCase,
+  CreateCommentForPostUseCase,
+  SetLikeStatusForPostUseCase,
+  SetLikeStatusForCommentUseCase,
+  UpdateCommentUseCase,
+  DeleteCommentUseCase,
+];
 
 @Module({
   imports: [
@@ -30,21 +55,19 @@ import { LikeStatusComment, LikeStatusCommentSchema } from './domain/likeStatusC
       { name: LikeStatusPost.name, schema: LikeStatusPostSchema },
       { name: LikeStatusComment.name, schema: LikeStatusCommentSchema },
     ]),
-    UserAccountsModule
+    UserAccountsModule,
+    CqrsModule,
   ],
   controllers: [BlogsController, PostsController, CommentsController],
   providers: [
-    BlogsService,
     BlogsQueryRepository,
     BlogsRepository,
-    PostsService,
     PostsRepository,
     PostsQueryRepository,
-    CommentsService,
     CommentRepository,
     CommentsQueryRepository,
-    LikesService,
     LikesRepository,
+    ...useCases,
   ],
 })
-export class BlogersPlatformModule { }
+export class BlogersPlatformModule {}

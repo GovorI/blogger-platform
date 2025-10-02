@@ -14,10 +14,13 @@ export enum Environments {
 @Injectable()
 export class CoreConfig {
   constructor(private configService: ConfigService<any, true>) {
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+
     this.port = Number(this.configService.get<string>('PORT')) || 3000;
     this.mongoURI = this.configService.get<string>('MONGODB_URI');
     this.env = this.configService.get<string>('NODE_ENV');
-    this.globalPrefix = this.configService.get<string>('GLOBAL_PREFIX') || 'api';
+    this.globalPrefix =
+      this.configService.get<string>('GLOBAL_PREFIX') || 'api';
 
     this.isSwaggerEnabled = configValidationUtility.convertToBoolean(
       this.configService.get<string>('IS_SWAGGER_ENABLED'),
@@ -75,7 +78,8 @@ export class CoreConfig {
   sendInternalServerErrorDetails: boolean;
 
   @IsNotEmpty({
-    message: 'Set Env variable GLOBAL_PREFIX for API global prefix, example: api',
+    message:
+      'Set Env variable GLOBAL_PREFIX for API global prefix, example: api',
   })
   globalPrefix: string;
 }

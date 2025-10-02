@@ -1,20 +1,18 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { HydratedDocument, Model } from "mongoose";
+import { Prop, Schema } from '@nestjs/mongoose';
 
 export enum LikeStatuses {
-    Like = "Like",
-    Dislike = "Dislike",
-    None = "None",
+  Like = 'Like',
+  Dislike = 'Dislike',
+  None = 'None',
 }
 
 @Schema({ timestamps: true })
 export abstract class BaseLikeStatus {
-    @Prop({ type: String, required: true })
-    userId: string;
-    @Prop({ type: String, enum: LikeStatuses, required: true })
-    status: string;
+  @Prop({ type: String, required: true })
+  userId: string;
+  @Prop({ type: String, enum: LikeStatuses, required: true })
+  status: LikeStatuses;
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
-

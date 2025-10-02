@@ -1,7 +1,7 @@
 //...
 
 //dto для запроса списка юзеров с пагинацией, сортировкой, фильтрами
-import { BaseQueryParams } from '../../../core/dto/base.query-params.input-dto';
+import { BaseQueryParams } from '../../../../core/dto/base.query-params.input-dto';
 
 export class GetUsersQueryParams extends BaseQueryParams {
   sortBy = UsersSortBy.CreatedAt;

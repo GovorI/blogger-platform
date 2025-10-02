@@ -15,7 +15,7 @@ import { UsersService } from '../application/user-service';
 import { UsersQueryRepository } from '../infrastructure/users.query-repository';
 import { CreateUserInputDto } from './input-dto/users.input-dto';
 import { PaginatedViewDto } from '../../../core/dto/base.paginated.view-dto';
-import { GetUsersQueryParams } from './get-users-query-params.input-dto';
+import { GetUsersQueryParams } from './input-dto/get-users-query-params.input-dto';
 import { BasicAuthGuard } from '../guards/basic/basic-auth.guard';
 
 @Controller('users')
@@ -23,7 +23,7 @@ export class UserController {
   constructor(
     private readonly usersService: UsersService,
     private readonly usersQueryRepository: UsersQueryRepository,
-  ) {}
+  ) { }
   @Get(':id')
   async getById(@Param('id') id: string): Promise<UserViewDto> {
     return this.usersQueryRepository.getByIdOrNotFoundFail(id);

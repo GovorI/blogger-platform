@@ -5,7 +5,7 @@ import {
   UnauthorizedException as DomainUnauthorizedException,
   UserNotFoundException,
 } from '../../../core/domain/domain.exception';
-import { GetUsersQueryParams } from '../api/get-users-query-params.input-dto';
+import { GetUsersQueryParams } from '../api/input-dto/get-users-query-params.input-dto';
 import { PaginatedViewDto } from '../../../core/dto/base.paginated.view-dto';
 import { FilterQuery } from 'mongoose';
 import { SortDirection } from '../../../core/dto/base.query-params.input-dto';
@@ -14,7 +14,7 @@ export class UsersQueryRepository {
   constructor(
     @InjectModel(User.name)
     private UserModel: UserModelType,
-  ) {}
+  ) { }
 
   async getByIdOrNotFoundFail(id: string): Promise<UserViewDto> {
     const user = await this.UserModel.findOne({
@@ -78,8 +78,8 @@ export class UsersQueryRepository {
         .exec(),
       this.UserModel.countDocuments(filter),
     ]);
-    const items = users.map((user: UserDocument) =>
-      UserViewDto.mapToView(user),
+    const items = users.map(user =>
+      UserViewDto.mapToView(user as UserDocument),
     );
     console.log(query.pageNumber, query.pageSize, totalCount);
     return PaginatedViewDto.mapToView({

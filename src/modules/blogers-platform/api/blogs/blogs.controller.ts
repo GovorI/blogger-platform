@@ -1,25 +1,24 @@
 import {
-  Controller,
   Body,
-  Post,
-  Get,
-  Param,
+  Controller,
   Delete,
-  Query,
-  Put,
+  Get,
   HttpCode,
-  UseGuards,
+  Param,
+  Post,
+  Put,
+  Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { BadRequestException } from '../../../../core/domain/domain.exception';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
   ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
-import { BlogsService } from '../../application/blogs-service';
 import {
   CreateBlogInputDto,
   UpdateBlogInputDto,
@@ -28,22 +27,30 @@ import { BlogsQueryRepository } from '../../infrastructure/blogs.query-repositor
 import { GetBlogsQueryParams } from './get-blogs-query-params.input-dto';
 import { PaginatedViewDto } from '../../../../core/dto/base.paginated.view-dto';
 import { BlogViewDto } from '../view-dto/blog.view-dto';
-import { PostsService } from '../../application/posts-service';
-import { CreatePostInputDto, CreatePostForBlogInputDto } from '../input-dto/post.input.dto';
+import {
+  CreatePostForBlogInputDto,
+  CreatePostInputDto,
+} from '../input-dto/post.input.dto';
 import { PostsQueryRepository } from '../../infrastructure/posts.query-repository';
 import { GetPostsQueryParams } from '../posts/get-posts-query-params.input-dto';
 import { BasicAuthGuard } from '../../../user-accounts/guards/basic/basic-auth.guard';
 import { JwtOptionalGuard } from '../../../user-accounts/guards/bearer/jwt-optional.guard';
+import { CreateBlogCommand } from '../../application/use-cases/blogs/create-blog.use-case';
+import { CommandBus } from '@nestjs/cqrs';
+import { UpdateBlogCommand } from '../../application/use-cases/blogs/update-blog.use-case';
+import { DeleteBlogCommand } from '../../application/use-cases/blogs/delete-blog.use-case';
+import { PostViewDto } from '../view-dto/post.view-dto';
+import { JwtPayload } from '../../../user-accounts/domain/jwt-payload.interface';
+import { CreatePostForBlogCommand } from '../../application/use-cases/posts/create-post-for-blog.use-case';
 
 @ApiTags('blogs')
 @Controller('blogs')
 export class BlogsController {
   constructor(
-    private readonly blogsService: BlogsService,
     private readonly blogsQueryRepo: BlogsQueryRepository,
-    private readonly postsService: PostsService,
     private readonly postsQueryRepository: PostsQueryRepository,
-  ) { }
+    private commandBus: CommandBus,
+  ) {}
 
   @Post()
   @UseGuards(BasicAuthGuard)
@@ -55,9 +62,11 @@ export class BlogsController {
     type: BlogViewDto,
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async createBlog(@Body() dto: CreateBlogInputDto) {
-    const blogId: string = await this.blogsService.createBlog(dto);
-    return await this.blogsQueryRepo.getByIdOrNotFoundFail(blogId);
+  async createBlog(@Body() dto: CreateBlogInputDto): Promise<BlogViewDto> {
+    const blogId: string = await this.commandBus.execute(
+      new CreateBlogCommand(dto),
+    );
+    return this.blogsQueryRepo.getByIdOrNotFoundFail(blogId);
   }
 
   @Get(':id')
@@ -69,8 +78,8 @@ export class BlogsController {
     type: BlogViewDto,
   })
   @ApiResponse({ status: 404, description: 'Blog not found' })
-  async getById(@Param('id') id: string) {
-    return await this.blogsQueryRepo.getByIdOrNotFoundFail(id);
+  async getById(@Param('id') id: string): Promise<BlogViewDto> {
+    return this.blogsQueryRepo.getByIdOrNotFoundFail(id);
   }
 
   @Put(':id')
@@ -82,8 +91,11 @@ export class BlogsController {
   @ApiResponse({ status: 204, description: 'Blog updated successfully' })
   @ApiResponse({ status: 404, description: 'Blog not found' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async updateBlog(@Param('id') id: string, @Body() dto: UpdateBlogInputDto) {
-    await this.blogsService.updateBlog(id, dto);
+  async updateBlog(
+    @Param('id') id: string,
+    @Body() dto: UpdateBlogInputDto,
+  ): Promise<void> {
+    return this.commandBus.execute(new UpdateBlogCommand(id, dto));
   }
 
   @Get()
@@ -105,8 +117,8 @@ export class BlogsController {
   @ApiParam({ name: 'id', description: 'Blog ID' })
   @ApiResponse({ status: 204, description: 'Blog deleted successfully' })
   @ApiResponse({ status: 404, description: 'Blog not found' })
-  async deleteById(@Param('id') id: string) {
-    return this.blogsService.deleteBlogById(id);
+  async deleteById(@Param('id') id: string): Promise<void> {
+    return this.commandBus.execute(new DeleteBlogCommand(id));
   }
 
   @Post(':id/posts')
@@ -114,16 +126,18 @@ export class BlogsController {
   async createPostForBlog(
     @Param('id') id: string,
     @Body() postData: CreatePostForBlogInputDto,
-  ) {
+  ): Promise<PostViewDto> {
     if (!id) throw new BadRequestException('Blog ID is required');
 
     const createPostDto: CreatePostInputDto = {
       ...postData,
-      blogId: id
+      blogId: id,
     };
 
-    const postId: string = await this.postsService.createPost(createPostDto);
-    return await this.postsQueryRepository.getByIdOrNotFoundFail(postId);
+    const postId: string = await this.commandBus.execute(
+      new CreatePostForBlogCommand(createPostDto),
+    );
+    return this.postsQueryRepository.getByIdOrNotFoundFail(postId);
   }
 
   @Get(':id/posts')
@@ -131,10 +145,10 @@ export class BlogsController {
   async getPostsForBlog(
     @Param('id') id: string,
     @Query() query: GetPostsQueryParams,
-    @Req() req: any,
-  ) {
+    @Req() req: Request & { user?: JwtPayload },
+  ): Promise<PaginatedViewDto<PostViewDto[]>> {
     await this.blogsQueryRepo.getByIdOrNotFoundFail(id);
-    const currentUserId = req.user?.id;
+    const currentUserId = req.user?.sub;
     return this.postsQueryRepository.getPostsForBlog(id, query, currentUserId);
   }
 }

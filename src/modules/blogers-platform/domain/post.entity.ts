@@ -3,6 +3,12 @@ import { CreatePostDto } from '../dto/create-post.dto';
 import { HydratedDocument, Model } from 'mongoose';
 import { LikeStatuses } from './base-like.entity';
 
+export interface NewestLikeInfo {
+  login: string;
+  userId: string;
+  addedAt: Date;
+}
+
 @Schema({ _id: false })
 export class ExtendedLikesInfo {
   @Prop({ type: Number, required: true, default: 0, min: 0 })
@@ -11,13 +17,19 @@ export class ExtendedLikesInfo {
   @Prop({ type: Number, required: true, default: 0, min: 0 })
   dislikesCount: number;
 
-  @Prop({ type: String, enum: LikeStatuses, required: true, default: LikeStatuses.None })
+  @Prop({
+    type: String,
+    enum: LikeStatuses,
+    required: true,
+    default: LikeStatuses.None,
+  })
   myStatus: string;
 
   @Prop({ type: [Object], default: [] })
-  newestLikes: any[];
+  newestLikes: NewestLikeInfo[];
 }
-export const ExtendedLikesInfoSchema = SchemaFactory.createForClass(ExtendedLikesInfo);
+export const ExtendedLikesInfoSchema =
+  SchemaFactory.createForClass(ExtendedLikesInfo);
 
 @Schema({ timestamps: true })
 export class Post {
@@ -56,7 +68,7 @@ export class Post {
       likesCount: 0,
       dislikesCount: 0,
       myStatus: LikeStatuses.None,
-      newestLikes: []
+      newestLikes: [],
     };
 
     return post as PostDocument;

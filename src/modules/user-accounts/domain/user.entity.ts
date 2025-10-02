@@ -4,10 +4,6 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { HydratedDocument, Model } from 'mongoose';
 
-/**
- * User Entity Schema
- * This class represents the schema and behavior of a User entity.
- */
 @Schema({ timestamps: true })
 export class User {
   @Prop({ type: String, required: true })
@@ -34,6 +30,7 @@ export class User {
   @Prop({
     type: Date,
     required: function (this: User) {
+      //todo false
       return !this.isEmailConfirmed;
     },
     default: null,
@@ -49,13 +46,16 @@ export class User {
   @Prop({ type: [String], required: false, default: [] })
   validRefreshTokens: string[];
 
+  @Prop({
+    type: Object,
+    required: false,
+    default: {},
+  })
+  deviceToTokenMapping: Record<string, string>;
+
   createdAt: Date;
   updatedAt: Date;
 
-  /**
-   * Deletion timestamp, nullable, if date exist, means entity soft deleted
-   * @type {Date | null}
-   */
   @Prop({ type: Date, nullable: true, default: null })
   deletedAt: Date | null;
 
@@ -70,12 +70,6 @@ export class User {
     return user as UserDocument;
   }
 
-  /**
-   * Marks the user as deleted
-   * Throws an error if already deleted
-   * @throws {Error} If the entity is already deleted
-   * DDD continue: инкапсуляция (вызываем методы, которые меняют состояние\св-ва) объектов согласно правилам этого объекта
-   */
   makeDeleted() {
     if (this.deletedAt !== null) {
       throw new Error('Entity already deleted');
@@ -99,12 +93,22 @@ export class User {
   /**
    * Adds a new refresh token to the valid tokens list
    * @param {string} tokenId - The ID of the refresh token to add
+   * @param {string} deviceId - The device ID associated with this token
    */
-  addRefreshToken(tokenId: string) {
+  addRefreshToken(tokenId: string, deviceId?: string) {
     if (!this.validRefreshTokens) {
       this.validRefreshTokens = [];
     }
     this.validRefreshTokens.push(tokenId);
+
+    if (deviceId) {
+      if (!this.deviceToTokenMapping) {
+        this.deviceToTokenMapping = {};
+      }
+      this.deviceToTokenMapping[deviceId] = tokenId;
+      // Mark the field as modified for Mongoose to persist changes
+      (this as any).markModified('deviceToTokenMapping');
+    }
   }
 
   /**
@@ -115,14 +119,36 @@ export class User {
     if (!this.validRefreshTokens) {
       return;
     }
-    this.validRefreshTokens = this.validRefreshTokens.filter(id => id !== tokenId);
+    this.validRefreshTokens = this.validRefreshTokens.filter(
+      (id) => id !== tokenId,
+    );
+
+    if (this.deviceToTokenMapping) {
+      for (const [deviceId, mappedTokenId] of Object.entries(
+        this.deviceToTokenMapping,
+      )) {
+        if (mappedTokenId === tokenId) {
+          delete this.deviceToTokenMapping[deviceId];
+          // Mark the field as modified for Mongoose to persist changes
+          (this as any).markModified('deviceToTokenMapping');
+          break;
+        }
+      }
+    }
   }
 
-  /**
-   * Checks if a refresh token is valid
-   * @param {string} tokenId - The ID of the refresh token to check
-   * @returns {boolean} True if the token is valid
-   */
+  removeRefreshTokensForDevice(deviceId: string) {
+    if (!this.deviceToTokenMapping) {
+      return;
+    }
+
+    const tokenId = this.deviceToTokenMapping[deviceId];
+
+    if (tokenId) {
+      this.removeRefreshToken(tokenId);
+    }
+  }
+
   isRefreshTokenValid(tokenId: string): boolean {
     if (!this.validRefreshTokens) {
       return false;
@@ -130,21 +156,20 @@ export class User {
     return this.validRefreshTokens.includes(tokenId);
   }
 
-  /**
-   * Invalidates all refresh tokens
-   */
   invalidateAllRefreshTokens() {
     this.validRefreshTokens = [];
+    if (this.deviceToTokenMapping) {
+      this.deviceToTokenMapping = {};
+      // Mark the field as modified for Mongoose to persist changes
+      (this as any).markModified('deviceToTokenMapping');
+    }
   }
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
-//регистрирует методы сущности в схеме
 UserSchema.loadClass(User);
 
-//Типизация документа
 export type UserDocument = HydratedDocument<User>;
 
-//Типизация модели + статические методы
 export type UserModelType = Model<UserDocument> & typeof User;

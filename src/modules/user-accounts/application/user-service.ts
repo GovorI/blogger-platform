@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { BadRequestException, UserNotFoundException } from '../../../core/domain/domain.exception';
+import {
+  BadRequestException,
+  UserNotFoundException,
+} from '../../../core/domain/domain.exception';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument, UserModelType } from '../domain/user.entity';
 import { UsersRepository } from '../infrastructure/users.repository';
@@ -14,7 +17,7 @@ export class UsersService {
     private UserModel: UserModelType,
     private usersRepository: UsersRepository,
     private bcryptService: CryptoService,
-  ) { }
+  ) {}
 
   async createUser(dto: CreateUserDto): Promise<string> {
     const [existingUserByLogin, existingUserByEmail] = await Promise.all([
@@ -66,10 +69,10 @@ export class UsersService {
   }
 
   async getUserByIdOrNotFound(id: string): Promise<UserDocument> {
-    const user = await this.usersRepository.findById(id)
+    const user = await this.usersRepository.findById(id);
     if (!user) {
-      throw new UserNotFoundException
+      throw new UserNotFoundException();
     }
-    return user
+    return user;
   }
 }
